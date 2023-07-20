@@ -9,18 +9,26 @@ interface User {
 function App() {
     const [users, setUsers] = useState<User[]>([]);
     const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+
 
 
     useEffect(() => {
         const controller = new AbortController()
+
+        setIsLoading(true)
         axios
             .get<User[]>("https://jsonplaceholder.typicode.com/users", {signal: controller.signal})
-            .then((res) => setUsers(res.data))
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-member-access
+            .then((res) => {
+                setUsers(res.data)
+                setIsLoading(false)
+            })
             .catch((err) => {
                 if(err instanceof CanceledError) return;
                 setError((err as AxiosError).message)
-            });
+                setIsLoading(false)
+            })
+            // .finally( () => setIsLoading(false));
 
         return () => controller.abort();
 
@@ -45,6 +53,7 @@ function App() {
     return (
         <>
             {error && <p className="text-danger">{error}</p>}
+            {isLoading && <div className="spinner-border"></div>}
             {users.map(user => (
                 <div key={user.id}>{user.name}</div>
             ))}
