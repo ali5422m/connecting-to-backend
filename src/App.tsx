@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import axios, {AxiosError} from "axios";
+import axios, {AxiosError, CanceledError} from "axios";
 
 interface User {
     id: number;
@@ -12,10 +12,18 @@ function App() {
 
 
     useEffect(() => {
+        const controller = new AbortController()
         axios
-            .get<User[]>("https://jsonplaceholder.typicode.com/users")
+            .get<User[]>("https://jsonplaceholder.typicode.com/users", {signal: controller.signal})
             .then((res) => setUsers(res.data))
-            .catch((err) => setError((err as AxiosError).message));
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-member-access
+            .catch((err) => {
+                if(err instanceof CanceledError) return;
+                setError((err as AxiosError).message)
+            });
+
+        return () => controller.abort();
+
     }, [])
 
     //way 2
