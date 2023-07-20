@@ -1,10 +1,7 @@
 import {useEffect, useState} from "react";
-import apiClient, {CanceledError, AxiosError} from "./services/api-client.ts";
+import {CanceledError, AxiosError} from "./services/api-client.ts";
+import UserService, {User} from "./services/user-service.ts";
 
-interface User {
-    id: number;
-    name: string;
-}
 
 function App() {
     const [users, setUsers] = useState<User[]>([]);
@@ -13,12 +10,10 @@ function App() {
 
 
     useEffect(() => {
-        const controller = new AbortController()
 
         setIsLoading(true)
-        apiClient
-            .get<User[]>("/users", {signal: controller.signal})
-            .then((res) => {
+        const {request, cancel} = UserService.getAllUsers();
+            request.then((res) => {
                 setUsers(res.data)
                 setIsLoading(false)
             })
@@ -28,8 +23,9 @@ function App() {
                 setIsLoading(false)
             })
         // .finally( () => setIsLoading(false));
+        return () => cancel();
 
-        return () => controller.abort();
+
 
     }, [])
 
@@ -38,8 +34,7 @@ function App() {
         const originalUsers = [...users];
         setUsers(users.filter(u => u.id !== user.id))
 
-        apiClient
-            .delete('/users/' + `${user.id}`)
+            UserService.deleteUser(user.id)
             .catch(err => {
                 setError((err as AxiosError).message)
                 setUsers(originalUsers)
@@ -51,9 +46,8 @@ function App() {
         const newUser = {id: 0, name: "ALi"};
         setUsers([newUser, ...users]);
 
-        apiClient
-            .post('/users', newUser)
-            .then( ({data: savedUser}) => setUsers([savedUser, ...users]))
+      UserService.createUser(newUser)
+            .then(({data: savedUser}) => setUsers([savedUser, ...users]))
             .catch(err => {
                 setError((err as AxiosError).message)
                 setUsers(originalUsers)
@@ -63,9 +57,9 @@ function App() {
     const updateUser = (user: User) => {
         const originalUsers = [...users];
         const updatedUser = {...user, name: user.name + "!"}
-        setUsers(users.map(u => u.id === user.id ? updatedUser : u ))
+        setUsers(users.map(u => u.id === user.id ? updatedUser : u))
 
-        apiClient.patch('/users/' + `${user.id}`, updatedUser)
+       UserService.updateUser(updatedUser)
             .catch(err => {
                 setError((err as AxiosError).message)
                 setUsers(originalUsers)
@@ -97,10 +91,11 @@ function App() {
             <ul className="list-group">
                 {users.map(user => (
                     <li key={user.id} className="list-group-item d-flex justify-content-between">{user.name}
-                       <div className="d-flex gap-3">
-                           <button className="btn btn-outline-secondary" onClick={() => updateUser(user)}>Update</button>
-                           <button className="btn btn-outline-danger" onClick={() => deleteUser(user)}>Delete</button>
-                       </div>
+                        <div className="d-flex gap-3">
+                            <button className="btn btn-outline-secondary" onClick={() => updateUser(user)}>Update
+                            </button>
+                            <button className="btn btn-outline-danger" onClick={() => deleteUser(user)}>Delete</button>
+                        </div>
                     </li>
                 ))}
             </ul>
